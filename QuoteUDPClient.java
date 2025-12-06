@@ -1,25 +1,38 @@
-import java.io.*;
-import java.net.Socket;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.Scanner;
 
 public class QuoteUDPClient {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
 
-        Socket socket = new Socket("localhost", 8080);
+        DatagramSocket socket = new DatagramSocket();
+        InetAddress address = InetAddress.getByName("localhost");
 
-        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
+        Scanner sc = new Scanner(System.in);
 
-        String serverMessage;
+        while (true) {
+            System.out.print("Enter GET or exit: ");
+            String msg = sc.nextLine();
 
-        while ((serverMessage = in.readLine()) != null) {
-            System.out.println(serverMessage);
+            byte[] sendData = msg.getBytes();
+            DatagramPacket sendPacket =
+                    new DatagramPacket(sendData, sendData.length, address, 8080);
+            socket.send(sendPacket);
 
-            String userInput = stdIn.readLine();
-            out.println(userInput);
+            if (msg.equalsIgnoreCase("exit")) {
+                System.out.println("Goodbye!");
+                break; // client exits
+            }
 
-            String reply = in.readLine();
-            System.out.println(reply);
+            byte[] buffer = new byte[1024];
+            DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
+            socket.receive(receivePacket);
+
+            String reply = new String(receivePacket.getData(), 0, receivePacket.getLength());
+            System.out.println("Server reply: " + reply);
         }
+
+        socket.close();
     }
 }

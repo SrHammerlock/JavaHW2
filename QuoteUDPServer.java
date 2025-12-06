@@ -1,13 +1,11 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
-
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.util.Random;
 
 public class QuoteUDPServer {
-    public static void main(String[] args) throws IOException, Exception {
+
+    public static void main(String[] args) throws Exception {
+
         String[] quotes = {
                 "Believe you can and you're halfway there.",
                 "The only way to do great work is to love what you do.",
@@ -21,37 +19,43 @@ public class QuoteUDPServer {
                 "Small steps every day lead to big results."
         };
 
-        ServerSocket serverSocket = new ServerSocket(8080);
-        System.out.println("Server running on port 8080");
-        while (true) {
-            Socket socket = serverSocket.accept();
-            System.out.println("Client connected!");
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            while (true) {
-                try {
+        DatagramSocket server = new DatagramSocket(8080);
+        System.out.println("UDP Quote Server running on port 8080...");
 
-                    out.println("Type 'GET' for quote or 'exit' to quit");
-                    String expression = in.readLine();
-                    if (expression.equals("exit")) {
-                        out.println("Goodbye!");
-                        System.out.println("Client disconnected!");
-                        break;
-                    }
-                    if (expression.equals("GET")) {
-                        int randindex = (int) (Math.random() * quotes.length);
-                        String quote = quotes[randindex];
-                        out.println(quote);
-                    }
-                    else {
-                        out.println("ERROR: message must be 'GET' or 'exit'");
-                    }
-                }catch (Exception e) {
-                    out.println("ERROR: " + e.getMessage());
-                }
+        byte[] buffer = new byte[1024];
+        Random rand = new Random();
+
+        while (true) {
+            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+            server.receive(packet);
+
+            String message = new String(packet.getData(), 0, packet.getLength());
+
+            if (message.equalsIgnoreCase("exit")) {
+                System.out.println("Client requested exit.");
+                continue;
             }
-            socket.close();
-            System.out.println("Waiting for new clients...\n");
+
+            if (!message.equalsIgnoreCase("GET")) {
+                String error = "ERROR: message must be GET or exit";
+                byte[] sendData = error.getBytes();
+                DatagramPacket sendPacket =
+                        new DatagramPacket(sendData, sendData.length,
+                                packet.getAddress(), packet.getPort());
+                server.send(sendPacket);
+                continue;
+            }
+
+            String quote = quotes[rand.nextInt(quotes.length)];
+            byte[] sendData = quote.getBytes();
+
+            DatagramPacket sendPacket =
+                    new DatagramPacket(sendData, sendData.length,
+                            packet.getAddress(), packet.getPort());
+
+            server.send(sendPacket);
+
+            System.out.println("Sent quote to client.");
         }
     }
 }
