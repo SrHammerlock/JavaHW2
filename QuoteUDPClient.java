@@ -22,7 +22,7 @@ public class QuoteUDPClient {
 
             if (msg.equalsIgnoreCase("exit")) {
                 System.out.println("Goodbye!");
-                break; // client exits
+                break; 
             }
 
             byte[] buffer = new byte[1024];
